@@ -2,7 +2,7 @@
 import OpenAI from 'openai';
 
 const client = new OpenAI({
-  apiKey: "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" // This is the default and can be omitted
+  apiKey: "" // This is the default and can be omitted
 });
 
 const response = await client.responses.create({
