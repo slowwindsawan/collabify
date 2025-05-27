@@ -28,3 +28,5 @@ venv
 vevn
 .env
 python.js
+# Local Netlify folder
+.netlify
