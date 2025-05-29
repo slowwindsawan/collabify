@@ -83,7 +83,6 @@ const AIAgent: React.FC = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    console.log(messages);
     setMessages(messages);
   }, [messages]);
 
@@ -91,6 +90,8 @@ const AIAgent: React.FC = () => {
     (async () => {
       let msgs = (await loadMessages(userId, currentChat)) || [];
       console.log(msgs);
+      setWebSources([]);
+      setSuggestedChange(null);
       // setMessages(msgs);
     })();
   }, [currentChat]);
@@ -614,7 +615,7 @@ const AIAgent: React.FC = () => {
         ) : (
           <>
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
-              <BotMessageSquare size={64}/>
+              <BotMessageSquare size={64} />
               <h2 className="text-lg font-semibold mb-1">No messages yet</h2>
               <p className="text-sm text-gray-400">
                 Start the conversation by sending a message.
