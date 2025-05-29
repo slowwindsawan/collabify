@@ -11,6 +11,10 @@ interface EditorState {
 export const useEditorStore = create<EditorState>((set) => ({
   content: '',
   editor: null,
+  chats: [],
+  currentChat: null,
   setContent: (content) => set({ content }),
   setEditor: (editor) => set({ editor }),
+  setChats: (chats) => set({ chats }),
+  setCurrentChat: (currentChat) => set({ currentChat })
 }));

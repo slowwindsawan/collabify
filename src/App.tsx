@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import MainLayout from './components/Layout/MainLayout';
 import { useDocumentsStore } from './store/documentsStore';
+import {useEditorStore} from './store/editorStore';
 import { Loader2 } from 'lucide-react';
 import { supabase, ensureAuthenticated } from './lib/supabase';
 
 function App() {
   const { setUserId, fetchKnowledgeBases, isLoading } = useDocumentsStore();
+  const { chats, setChats, setCurrentChat } = useEditorStore();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -21,9 +23,12 @@ function App() {
     const initializeApp = async () => {
       try {
         // Ensure user is authenticated
-        const { data: { session } } = await ensureAuthenticated(userId);
+        const { data: { session, allChats } } = await ensureAuthenticated(userId);
 
-        console.log('Session:', session);
+        setChats(allChats || []);
+        if(allChats.length){
+          setCurrentChat(allChats[0].id);
+        }
         
         if (!session) {
           throw new Error('Failed to authenticate');

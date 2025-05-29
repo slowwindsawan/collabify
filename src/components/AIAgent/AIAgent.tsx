@@ -12,6 +12,7 @@ import {
   Loader2,
   Check,
   XCircle,
+  BotMessageSquare,
 } from "lucide-react";
 import { useAIStore } from "../../store/aiStore";
 import { useDocumentsStore } from "../../store/documentsStore";
@@ -41,10 +42,10 @@ function transformHtml(html) {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    return `<ul class="mt-2">${items
+    return `<ul className="mt-2">${items
       .map(
         (item) =>
-          `<li class="dark:text-gray-300 font-bold text-gray-600 font-mono text-sm">- ${item}</li>`
+          `<li className="dark:text-gray-300 font-bold text-gray-600 font-mono text-sm">- ${item}</li>`
       )
       .join("")}</ul>`;
   });
@@ -63,10 +64,11 @@ const AIAgent: React.FC = () => {
     setLoading,
     chatHistory,
     loadMessages,
+    setMessages,
   } = useAIStore();
   const { currentKnowledgeBase, userId, currentDocument, updateDocument } =
     useDocumentsStore();
-  const { content: editorContent, setContent } = useEditorStore();
+  const { content: editorContent, setContent, currentChat } = useEditorStore();
   const { mode } = useThemeStore();
   const [userInput, setUserInput] = useState("");
   const [suggestedChange, setSuggestedChange] =
@@ -81,11 +83,21 @@ const AIAgent: React.FC = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    console.log(messages);
+    setMessages(messages);
   }, [messages]);
 
   useEffect(() => {
+    (async () => {
+      let msgs = (await loadMessages(userId, currentChat)) || [];
+      console.log(msgs);
+      // setMessages(msgs);
+    })();
+  }, [currentChat]);
+
+  useEffect(() => {
     if (userId) {
-      loadMessages(userId);
+      loadMessages(userId, currentChat);
     }
   }, [userId, loadMessages]);
 
@@ -111,7 +123,8 @@ const AIAgent: React.FC = () => {
           text: `📎 Uploaded file: ${file.name}`,
           sender: "user",
         },
-        userId
+        userId,
+        currentChat
       );
 
       // Upload file to session-files bucket
@@ -166,7 +179,8 @@ const AIAgent: React.FC = () => {
           text: `I've processed your file "${file.name}". What would you like to know about it?`,
           sender: "ai",
         },
-        userId
+        userId,
+        currentChat
       );
 
       // Store temporary vectors in state
@@ -182,7 +196,8 @@ const AIAgent: React.FC = () => {
           }`,
           sender: "ai",
         },
-        userId
+        userId,
+        currentChat
       );
     } finally {
       setLoading(false);
@@ -206,7 +221,8 @@ const AIAgent: React.FC = () => {
           text: "✨ I've applied the suggested changes to your document.",
           sender: "ai",
         },
-        userId
+        userId,
+        currentChat
       );
 
       setSuggestedChange(null);
@@ -217,7 +233,8 @@ const AIAgent: React.FC = () => {
           text: "Sorry, I couldn't apply the changes. Please try again.",
           sender: "ai",
         },
-        userId
+        userId,
+        currentChat
       );
     }
   };
@@ -229,7 +246,8 @@ const AIAgent: React.FC = () => {
         text: "I understand. Let me know if you'd like me to suggest something else.",
         sender: "ai",
       },
-      userId
+      userId,
+      currentChat
     );
   };
 
@@ -289,7 +307,8 @@ const AIAgent: React.FC = () => {
         text: userInput,
         sender: "user",
       },
-      userId
+      userId,
+      currentChat
     );
 
     setUserInput("");
@@ -349,7 +368,8 @@ const AIAgent: React.FC = () => {
             text: "🔍 Searching the web for additional information...",
             sender: "ai",
           },
-          userId
+          userId,
+          currentChat
         );
 
         await delay(2000);
@@ -360,7 +380,8 @@ const AIAgent: React.FC = () => {
             text: "I've consulted additional web sources to provide a more comprehensive answer.",
             sender: "ai",
           },
-          userId
+          userId,
+          currentChat
         );
       }
 
@@ -378,7 +399,8 @@ const AIAgent: React.FC = () => {
             text: data.answer,
             sender: "ai",
           },
-          userId
+          userId,
+          currentChat
         );
       } else {
         await addMessage(
@@ -386,7 +408,8 @@ const AIAgent: React.FC = () => {
             text: data.answer,
             sender: "ai",
           },
-          userId
+          userId,
+          currentChat
         );
       }
 
@@ -412,7 +435,8 @@ const AIAgent: React.FC = () => {
             text: sourcesMessage,
             sender: "ai",
           },
-          userId
+          userId,
+          currentChat
         );
       }
 
@@ -422,7 +446,7 @@ const AIAgent: React.FC = () => {
           data.webSources
             .map(
               (source: WebSource) =>
-                `<a href="${source.url}" class="truncate text-blue-500">${source.url}</a>`
+                `<a href="${source.url}" className="truncate text-blue-500">${source.url}</a>`
             )
             .join("\n");
 
@@ -431,7 +455,8 @@ const AIAgent: React.FC = () => {
             text: webSourcesMessage,
             sender: "ai",
           },
-          userId
+          userId,
+          currentChat
         );
       }
     } catch (error) {
@@ -453,7 +478,8 @@ const AIAgent: React.FC = () => {
               : "I apologize, but I encountered an error while processing your request. Please try again in a moment.",
           sender: "ai",
         },
-        userId
+        userId,
+        currentChat
       );
     } finally {
       setLoading(false);
@@ -521,65 +547,82 @@ const AIAgent: React.FC = () => {
           mode === "dark" ? "bg-gray-800" : "bg-gray-50"
         }`}
       >
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`mb-3 ${
-              message.sender === "user" ? "ml-auto" : ""
-            } max-w-[90%]`}
-          >
-            <div
-              className={`flex items-start gap-2 ${
-                message.sender === "user" ? "flex-row-reverse" : ""
-              }`}
-            >
+        {messages.length ? (
+          <>
+            {messages.map((message) => (
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  message.sender === "user"
-                    ? "bg-blue-500"
-                    : `${mode === "dark" ? "bg-gray-700" : "bg-gray-200"}`
-                }`}
-              >
-                {message.sender === "user" ? (
-                  <User size={16} className="text-white" />
-                ) : (
-                  <Bot size={16} className="text-blue-500" />
-                )}
-              </div>
-              <div
-                className={`rounded-lg px-3 py-2 ${
-                  message.sender === "user"
-                    ? `${
-                        mode === "dark" ? "bg-blue-600" : "bg-blue-500"
-                      } text-white`
-                    : `${mode === "dark" ? "bg-gray-700" : "bg-white"} ${
-                        mode === "dark" ? "text-white" : "text-gray-700"
-                      } border ${
-                        mode === "dark" ? "border-gray-700" : "border-gray-200"
-                      }`
-                }`}
-                style={{ maxWidth: "90%" }}
+                key={message.id}
+                className={`mb-3 ${
+                  message.sender === "user" ? "ml-auto" : ""
+                } max-w-[90%]`}
               >
                 <div
-                  className="break-all overflow-auto"
-                  dangerouslySetInnerHTML={{
-                    __html: transformHtml(message.text),
-                  }}
-                ></div>
+                  className={`flex items-start gap-2 ${
+                    message.sender === "user" ? "flex-row-reverse" : ""
+                  }`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      message.sender === "user"
+                        ? "bg-blue-500"
+                        : `${mode === "dark" ? "bg-gray-700" : "bg-gray-200"}`
+                    }`}
+                  >
+                    {message.sender === "user" ? (
+                      <User size={16} className="text-white" />
+                    ) : (
+                      <Bot size={16} className="text-blue-500" />
+                    )}
+                  </div>
+                  <div
+                    className={`rounded-lg px-3 py-2 ${
+                      message.sender === "user"
+                        ? `${
+                            mode === "dark" ? "bg-blue-600" : "bg-blue-500"
+                          } text-white`
+                        : `${mode === "dark" ? "bg-gray-700" : "bg-white"} ${
+                            mode === "dark" ? "text-white" : "text-gray-700"
+                          } border ${
+                            mode === "dark"
+                              ? "border-gray-700"
+                              : "border-gray-200"
+                          }`
+                    }`}
+                    style={{ maxWidth: "90%" }}
+                  >
+                    <div
+                      className="break-all overflow-auto"
+                      dangerouslySetInnerHTML={{
+                        __html: transformHtml(message.text),
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                <div
+                  className={`text-xs mt-1 ${
+                    message.sender === "user" ? "text-right" : ""
+                  } ${mode === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                >
+                  {message.timestamp.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
               </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
+              <BotMessageSquare size={64}/>
+              <h2 className="text-lg font-semibold mb-1">No messages yet</h2>
+              <p className="text-sm text-gray-400">
+                Start the conversation by sending a message.
+              </p>
             </div>
-            <div
-              className={`text-xs mt-1 ${
-                message.sender === "user" ? "text-right" : ""
-              } ${mode === "dark" ? "text-gray-400" : "text-gray-500"}`}
-            >
-              {message.timestamp.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </div>
-          </div>
-        ))}
+          </>
+        )}
+
         {(isLoading || isSearching) && (
           <div className="mb-3 max-w-[90%]">
             <div
