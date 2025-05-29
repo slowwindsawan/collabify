@@ -68,7 +68,7 @@ const AIAgent: React.FC = () => {
   } = useAIStore();
   const { currentKnowledgeBase, userId, currentDocument, updateDocument } =
     useDocumentsStore();
-  const { content: editorContent, setContent, currentChat } = useEditorStore();
+  const { content: editorContent, setContent, currentChat, chats } = useEditorStore();
   const { mode } = useThemeStore();
   const [userInput, setUserInput] = useState("");
   const [suggestedChange, setSuggestedChange] =
@@ -92,6 +92,11 @@ const AIAgent: React.FC = () => {
       console.log(msgs);
       setWebSources([]);
       setSuggestedChange(null);
+      chats.forEach(chat => {
+        if(chat.id==currentChat){
+          setContent(chat.text)
+        }
+      });
       // setMessages(msgs);
     })();
   }, [currentChat]);
