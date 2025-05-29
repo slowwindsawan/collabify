@@ -99,6 +99,9 @@ export const ensureAuthenticated = async (user_id) => {
       .from("users")
       .insert({ id: user_id });
     console.log("Insert Error:", insertError);
+    if(insertError){
+      window.location.reload()
+    }
     if (insertError) throw insertError;
 
     const { error: kbError } = await supabase
